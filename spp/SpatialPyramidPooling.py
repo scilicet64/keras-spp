@@ -13,9 +13,9 @@ class SpatialPyramidPooling(Layer):
             regions with 1, 2x2 and 4x4 max pools, so 21 outputs per feature map
     # Input shape
         4D tensor with shape:
-        `(samples, channels, rows, cols)` if dim_ordering='th'
+        `(samples, channels, rows, cols)` if dim_ordering='channels_first'
         or 4D tensor with shape:
-        `(samples, rows, cols, channels)` if dim_ordering='tf'.
+        `(samples, rows, cols, channels)` if dim_ordering='channels_last'.
     # Output shape
         2D tensor with shape:
         `(samples, channels * sum([i * i for i in pool_list])`
@@ -23,8 +23,8 @@ class SpatialPyramidPooling(Layer):
 
     def __init__(self, pool_list, **kwargs):
 
-        self.dim_ordering = K.image_dim_ordering()
-        assert self.dim_ordering in {'tf', 'th'}, 'dim_ordering must be in {tf, th}'
+        self.dim_ordering = K.image_data_format()
+        assert self.dim_ordering in {'channels_last', 'channels_first'}, 'dim_ordering must be in {channels_last, channels_first}'
 
         self.pool_list = pool_list
 
@@ -33,9 +33,9 @@ class SpatialPyramidPooling(Layer):
         super(SpatialPyramidPooling, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        if self.dim_ordering == 'th':
+        if self.dim_ordering == 'channels_first':
             self.nb_channels = input_shape[1]
-        elif self.dim_ordering == 'tf':
+        elif self.dim_ordering == 'channels_last':
             self.nb_channels = input_shape[3]
 
     def compute_output_shape(self, input_shape):
@@ -50,10 +50,10 @@ class SpatialPyramidPooling(Layer):
 
         input_shape = K.shape(x)
 
-        if self.dim_ordering == 'th':
+        if self.dim_ordering == 'channels_first':
             num_rows = input_shape[2]
             num_cols = input_shape[3]
-        elif self.dim_ordering == 'tf':
+        elif self.dim_ordering == 'channels_last':
             num_rows = input_shape[1]
             num_cols = input_shape[2]
 
@@ -62,7 +62,7 @@ class SpatialPyramidPooling(Layer):
 
         outputs = []
 
-        if self.dim_ordering == 'th':
+        if self.dim_ordering == 'channels_first':
             for pool_num, num_pool_regions in enumerate(self.pool_list):
                 for jy in range(num_pool_regions):
                     for ix in range(num_pool_regions):
@@ -82,7 +82,7 @@ class SpatialPyramidPooling(Layer):
                         pooled_val = K.max(xm, axis=(2, 3))
                         outputs.append(pooled_val)
 
-        elif self.dim_ordering == 'tf':
+        elif self.dim_ordering == 'channels_last':
             for pool_num, num_pool_regions in enumerate(self.pool_list):
                 for jy in range(num_pool_regions):
                     for ix in range(num_pool_regions):
@@ -104,9 +104,9 @@ class SpatialPyramidPooling(Layer):
                         pooled_val = K.max(xm, axis=(1, 2))
                         outputs.append(pooled_val)
 
-        if self.dim_ordering == 'th':
+        if self.dim_ordering == 'channels_first':
             outputs = K.concatenate(outputs)
-        elif self.dim_ordering == 'tf':
+        elif self.dim_ordering == 'channels_last':
             #outputs = K.concatenate(outputs,axis = 1)
             outputs = K.concatenate(outputs)
             #outputs = K.reshape(outputs,(len(self.pool_list),self.num_outputs_per_channel,input_shape[0],input_shape[1]))

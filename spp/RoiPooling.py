@@ -15,9 +15,9 @@ class RoiPooling(Layer):
     # Input shape
         list of two 4D tensors [X_img,X_roi] with shape:
         X_img:
-        `(1, channels, rows, cols)` if dim_ordering='th'
+        `(1, channels, rows, cols)` if dim_ordering='channels_first'
         or 4D tensor with shape:
-        `(1, rows, cols, channels)` if dim_ordering='tf'.
+        `(1, rows, cols, channels)` if dim_ordering='channels_last'.
         X_roi:
         `(1,num_rois,4)` list of rois, with ordering (x,y,w,h)
     # Output shape
@@ -27,8 +27,9 @@ class RoiPooling(Layer):
 
     def __init__(self, pool_list, num_rois, **kwargs):
 
-        self.dim_ordering = K.image_dim_ordering()
-        assert self.dim_ordering in {'tf', 'th'}, 'dim_ordering must be in {tf, th}'
+        self.dim_ordering = K.image_data_format()
+        assert self.dim_ordering in {'channels_last', 'channels_first'}, 'dim_ordering must be in {channels_last, channels_first}'
+
 
         self.pool_list = pool_list
         self.num_rois = num_rois
@@ -38,9 +39,9 @@ class RoiPooling(Layer):
         super(RoiPooling, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        if self.dim_ordering == 'th':
+        if self.dim_ordering == 'channels_first':
             self.nb_channels = input_shape[0][1]
-        elif self.dim_ordering == 'tf':
+        elif self.dim_ordering == 'channels_last':
             self.nb_channels = input_shape[0][3]
 
     def compute_output_shape(self, input_shape):
@@ -72,7 +73,7 @@ class RoiPooling(Layer):
             row_length = [w / i for i in self.pool_list]
             col_length = [h / i for i in self.pool_list]
 
-            if self.dim_ordering == 'th':
+            if self.dim_ordering == 'channels_first':
                 for pool_num, num_pool_regions in enumerate(self.pool_list):
                     for ix in range(num_pool_regions):
                         for jy in range(num_pool_regions):
@@ -93,7 +94,7 @@ class RoiPooling(Layer):
                             pooled_val = K.max(xm, axis=(2, 3))
                             outputs.append(pooled_val)
 
-            elif self.dim_ordering == 'tf':
+            elif self.dim_ordering == 'channels_last':
                 for pool_num, num_pool_regions in enumerate(self.pool_list):
                     for ix in range(num_pool_regions):
                         for jy in range(num_pool_regions):
